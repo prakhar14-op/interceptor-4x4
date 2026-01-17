@@ -123,15 +123,43 @@ export default async function handler(req, res) {
   try {
     const { uploadId, fileName, fileSize, totalChunks } = req.body;
 
+    console.log(`Complete upload request for ${uploadId}: ${fileName} (${totalChunks} chunks)`);
+
     if (!uploadId || !fileName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Ensure temp directory exists
+    if (!fs.existsSync(TEMP_DIR)) {
+      console.log(`Creating temp directory: ${TEMP_DIR}`);
+      fs.mkdirSync(TEMP_DIR, { recursive: true });
+    }
+
     const uploadDir = path.join(TEMP_DIR, uploadId);
 
+    // Check if upload directory exists
+    console.log(`Looking for upload directory: ${uploadDir}`);
+    if (!fs.existsSync(uploadDir)) {
+      console.error(`Upload directory not found: ${uploadDir}`);
+      // List what's actually in the temp directory
+      try {
+        const tempContents = fs.readdirSync(TEMP_DIR);
+        console.log(`Contents of ${TEMP_DIR}:`, tempContents);
+      } catch (err) {
+        console.error(`Cannot read temp directory ${TEMP_DIR}:`, err.message);
+      }
+      return res.status(404).json({ error: `Upload directory not found: ${uploadId}` });
+    }
+
     // Verify all chunks received
-    const chunkFiles = fs.readdirSync(uploadDir)
-      .filter(file => file.startsWith('chunk_') && file.endsWith('.bin'));
+    let chunkFiles;
+    try {
+      chunkFiles = fs.readdirSync(uploadDir)
+        .filter(file => file.startsWith('chunk_') && file.endsWith('.bin'));
+    } catch (error) {
+      console.error(`Error reading upload directory ${uploadDir}:`, error.message);
+      return res.status(500).json({ error: `Cannot access upload directory: ${error.message}` });
+    }
     
     if (chunkFiles.length !== totalChunks) {
       return res.status(400).json({
