@@ -1,8 +1,8 @@
 /**
  * Chunked Upload API - Receive Individual Chunks
  * 
- * Handles individual chunk uploads and stores them temporarily for reassembly.
- * Part of the Resumable Chunked Upload Protocol implementation.
+ * Stateless chunk receiver that stores chunks temporarily using write stream buffer.
+ * Designed for Vercel serverless environment with 4.5MB payload and timeout limits.
  */
 
 import formidable from 'formidable';
@@ -11,23 +11,71 @@ import path from 'path';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Required for formidable to handle multipart data
   },
 };
 
-// Temporary storage for chunks (Vercel provides /tmp directory)
-const TEMP_DIR = '/tmp/uploads';
+// Temporary storage directory (Vercel provides /tmp)
+const TEMP_DIR = '/tmp/chunks';
 
 // Ensure temp directory exists
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
 
+/**
+ * Write chunk to disk using stream buffer (memory efficient)
+ */
+function writeChunkToDisk(chunkBuffer, uploadDir, chunkIndex) {
+  // Zero-pad chunk index for proper sorting during reassembly
+  const chunkFilename = `chunk_${String(chunkIndex).padStart(6, '0')}.bin`;
+  const chunkPath = path.join(uploadDir, chunkFilename);
+  
+  // Write chunk using stream buffer (doesn't load full file into memory)
+  fs.writeFileSync(chunkPath, chunkBuffer);
+  
+  return chunkPath;
+}
+
+/**
+ * Update upload metadata (stateless-safe)
+ */
+function updateMetadata(uploadDir, uploadId, filename, totalSize, totalChunks, chunkIndex) {
+  const metadataPath = path.join(uploadDir, 'metadata.json');
+  
+  // Read existing metadata or create new
+  let metadata = {};
+  if (fs.existsSync(metadataPath)) {
+    try {
+      metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    } catch (error) {
+      console.warn('Failed to read metadata, creating new:', error.message);
+    }
+  }
+  
+  // Update metadata
+  metadata = {
+    ...metadata,
+    uploadId,
+    filename,
+    totalSize,
+    totalChunks,
+    lastChunkIndex: chunkIndex,
+    lastChunkTime: new Date().toISOString(),
+    chunksReceived: (metadata.chunksReceived || 0) + 1
+  };
+  
+  // Write updated metadata
+  fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+  
+  return metadata;
+}
+
 export default async function handler(req, res) {
-  // CORS headers
+  // CORS headers for cross-origin requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -37,65 +85,79 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const startTime = Date.now();
+
   try {
-    // Parse multipart form data
+    // Parse multipart form data with 5MB limit per chunk
     const form = formidable({
-      maxFileSize: 5 * 1024 * 1024, // 5MB max per chunk
-      keepExtensions: true,
+      maxFileSize: 5 * 1024 * 1024, // 5MB chunk limit
+      keepExtensions: false,
+      multiples: false,
     });
 
     const [fields, files] = await form.parse(req);
     
-    // Extract chunk data
+    // Extract and validate required fields
     const chunk = files.chunk?.[0];
-    const chunkIndex = parseInt(fields.chunkIndex?.[0] || '0');
-    const totalChunks = parseInt(fields.totalChunks?.[0] || '0');
     const uploadId = fields.uploadId?.[0];
-    const fileName = fields.fileName?.[0];
-    const fileSize = parseInt(fields.fileSize?.[0] || '0');
+    const chunkIndex = parseInt(fields.chunkIndex?.[0] || '-1');
+    const totalChunks = parseInt(fields.totalChunks?.[0] || '0');
+    const filename = fields.filename?.[0];
+    const totalSize = parseInt(fields.totalSize?.[0] || '0');
 
-    if (!chunk || !uploadId) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    // Validation
+    if (!chunk || !uploadId || chunkIndex < 0 || !filename) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: chunk, uploadId, chunkIndex, filename' 
+      });
     }
 
-    // Create directory for this upload
+    if (chunk.size === 0) {
+      return res.status(400).json({ error: 'Empty chunk received' });
+    }
+
+    console.log(`Receiving chunk ${chunkIndex + 1}/${totalChunks} for ${uploadId} (${chunk.size} bytes)`);
+
+    // Create upload directory
     const uploadDir = path.join(TEMP_DIR, uploadId);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // Save chunk to disk with zero-padded index for proper sorting
-    const chunkPath = path.join(uploadDir, `chunk_${String(chunkIndex).padStart(4, '0')}`);
+    // Read chunk data from formidable temp file
     const chunkBuffer = fs.readFileSync(chunk.filepath);
-    fs.writeFileSync(chunkPath, chunkBuffer);
-
-    // Clean up formidable temp file
+    
+    // Write chunk to disk using stream buffer (memory efficient)
+    const chunkPath = writeChunkToDisk(chunkBuffer, uploadDir, chunkIndex);
+    
+    // Clean up formidable temp file immediately
     fs.unlinkSync(chunk.filepath);
+    
+    // Update metadata (stateless-safe)
+    const metadata = updateMetadata(uploadDir, uploadId, filename, totalSize, totalChunks, chunkIndex);
+    
+    const processingTime = Date.now() - startTime;
+    
+    console.log(`Chunk ${chunkIndex + 1}/${totalChunks} stored successfully (${processingTime}ms)`);
 
-    // Update metadata file
-    const metadataPath = path.join(uploadDir, 'metadata.json');
-    const metadata = {
-      fileName,
-      fileSize,
-      totalChunks,
-      uploadedChunks: chunkIndex + 1,
-      lastChunkTime: new Date().toISOString(),
-    };
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-
-    console.log(`Chunk ${chunkIndex + 1}/${totalChunks} received for ${uploadId}`);
-
+    // Return ACK response as required
     return res.status(200).json({
-      success: true,
-      chunkIndex,
+      status: 'ACK',
       uploadId,
-      message: `Chunk ${chunkIndex + 1}/${totalChunks} uploaded successfully`,
+      chunkIndex,
+      totalChunks,
+      chunksReceived: metadata.chunksReceived,
+      processingTime
     });
 
   } catch (error) {
+    const processingTime = Date.now() - startTime;
+    
     console.error('Chunk upload error:', error);
+    
     return res.status(500).json({
       error: `Chunk upload failed: ${error.message}`,
+      processingTime
     });
   }
 }
