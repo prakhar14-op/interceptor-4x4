@@ -177,6 +177,11 @@ export class ChunkedUploader {
       throw error;
     }
   }
+
+  /**
+   * Upload all chunks in a single request (for serverless compatibility)
+   */
+  async startCombined(): Promise<any> {
     try {
       console.log(`Starting combined upload: ${this.totalChunks} chunks for ${this.file.name}`);
       
