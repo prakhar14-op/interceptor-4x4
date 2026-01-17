@@ -1,0 +1,44 @@
+# E-Raksha Docker Compose Configuration
+version: '3.8'
+
+services:
+  eraksha:
+    build: .
+    container_name: eraksha-app
+    ports:
+      - "8000:8000"  # Backend API
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+      - HOST=0.0.0.0
+      - HF_REPO=Pran-ay-22077/interceptor-models
+    env_file:
+      - .env  # Load environment variables from .env file (if exists)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Increased for model loading
+
+  # Optional: Add database service if needed
+  # postgres:
+  #   image: postgres:13
+  #   container_name: eraksha-db
+  #   environment:
+  #     POSTGRES_DB: eraksha
+  #     POSTGRES_USER: eraksha
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
