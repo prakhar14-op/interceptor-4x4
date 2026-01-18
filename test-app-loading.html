@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App Loading</title>
+</head>
+<body>
+    <h1>Frontend Test</h1>
+    <p>Testing if the React app loads properly...</p>
+    
+    <div id="test-results">
+        <h2>Test Results:</h2>
+        <div id="frontend-status">Checking frontend...</div>
+        <div id="api-status">Checking API...</div>
+    </div>
+
+    <script>
+        // Test frontend
+        fetch('http://localhost:5173/')
+            .then(response => {
+                document.getElementById('frontend-status').innerHTML = 
+                    response.ok ? '✅ Frontend is running on port 5173' : '❌ Frontend not responding';
+            })
+            .catch(error => {
+                document.getElementById('frontend-status').innerHTML = '❌ Frontend not accessible: ' + error.message;
+            });
+
+        // Test API
+        fetch('http://localhost:3001/api/test')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('api-status').innerHTML = '✅ API is working: ' + data.message;
+            })
+            .catch(error => {
+                document.getElementById('api-status').innerHTML = '❌ API not accessible: ' + error.message;
+            });
+    </script>
+</body>
+</html>
+</script>
+</body>
+</html>
