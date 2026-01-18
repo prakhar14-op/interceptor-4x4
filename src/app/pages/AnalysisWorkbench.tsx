@@ -194,8 +194,8 @@ const AnalysisWorkbench = () => {
     activateModel('frame-sampler');
     setProgress(15);
 
-    // Make API call to large video endpoint
-    const response = await fetch(`${API_URL}/predict-large-video`, {
+    // Make API call to comprehensive media analysis endpoint
+    const response = await fetch(`${API_URL}/media-analysis`, {
       method: 'POST',
       body: formData,
     });
@@ -228,8 +228,8 @@ const AnalysisWorkbench = () => {
     activateModel('frame-sampler');
     setProgress(15);
 
-    // Make API call
-    const response = await fetch(`${API_URL}/predict`, {
+    // Make API call to comprehensive media analysis endpoint
+    const response = await fetch(`${API_URL}/media-analysis`, {
       method: 'POST',
       body: formData,
     });
@@ -417,8 +417,8 @@ const AnalysisWorkbench = () => {
       activateModel('face-detector');
       setProgress(55);
 
-      // Make API call to agent-enhanced endpoint
-      const response = await fetch('/api/predict-with-agents', {
+      // Make API call to comprehensive media analysis endpoint
+      const response = await fetch('/api/media-analysis', {
         method: 'POST',
         body: formData,
       });

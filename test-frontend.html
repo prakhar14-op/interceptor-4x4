@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-result {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Frontend Connection Test</h1>
+    <p>Testing if your frontend can connect to the API server...</p>
+    
+    <button onclick="testViteServer()">Test Vite Server</button>
+    <button onclick="testAPIProxy()">Test API Proxy</button>
+    <button onclick="testDirectAPI()">Test Direct API</button>
+    <button onclick="testReactApp()">Test React App</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(title, message, success = true) {
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            div.innerHTML = `<h3>${title}</h3><p>${message}</p>`;
+            results.appendChild(div);
+        }
+        
+        async function testViteServer() {
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    addResult('✅ Vite Server', 'Vite development server is running correctly');
+                } else {
+                    addResult('❌ Vite Server', `Server responded with status: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult('❌ Vite Server', `Connection failed: ${error.message}`, false);
+            }
+        }
+        
+        async function testAPIProxy() {
+            try {
+                const response = await fetch('/api/test');
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ API Proxy', `Proxy working! Response: ${data.message}`);
+                } else {
+                    addResult('❌ API Proxy', `Proxy failed with status: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult('❌ API Proxy', `Proxy connection failed: ${error.message}`, false);
+            }
+        }
+        
+        async function testDirectAPI() {
+            try {
+                const response = await fetch('http://localhost:3001/api/test');
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ Direct API', `Direct connection working! Response: ${data.message}`);
+                } else {
+                    addResult('❌ Direct API', `Direct API failed with status: ${response.status}`, false);
+                }
+            } catch (error) {
+                addResult('❌ Direct API', `Direct API connection failed: ${error.message}`, false);
+            }
+        }
+        
+        async function testReactApp() {
+            try {
+                // Check if React is loaded
+                if (window.React) {
+                    addResult('✅ React App', 'React is loaded and working');
+                } else {
+                    // Try to access the React app root
+                    const reactRoot = document.querySelector('#root');
+                    if (reactRoot) {
+                        if (reactRoot.innerHTML.trim()) {
+                            addResult('✅ React App', 'React app is rendered');
+                        } else {
+                            addResult('❌ React App', 'React root is empty - check for JavaScript errors', false);
+                        }
+                    } else {
+                        addResult('❌ React App', 'React root element not found', false);
+                    }
+                }
+            } catch (error) {
+                addResult('❌ React App', `React test failed: ${error.message}`, false);
+            }
+        }
+        
+        // Auto-run tests
+        setTimeout(() => {
+            testViteServer();
+            setTimeout(() => testAPIProxy(), 500);
+            setTimeout(() => testDirectAPI(), 1000);
+            setTimeout(() => testReactApp(), 1500);
+        }, 100);
+    </script>
+</body>
+</html>
