@@ -92,24 +92,33 @@ LEGAL ASSESSMENT:
     };
 
     // Call our OnDemand webhook with the simulated data
-    const webhookUrl = `${req.headers.host?.includes('localhost') ? 'http' : 'https'}://${req.headers.host}/api/ondemand-webhook`;
+    const protocol = req.headers.host?.includes('localhost') ? 'http' : 'https';
+    const webhookUrl = `${protocol}://${req.headers.host}/api/ondemand-webhook`;
     
     console.log('Calling webhook:', webhookUrl);
     console.log('With data:', JSON.stringify(simulatedOnDemandData, null, 2));
     
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(simulatedOnDemandData)
-    });
+    let webhookResponse;
+    try {
+      webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(simulatedOnDemandData)
+      });
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      throw new Error(`Failed to call webhook: ${fetchError.message}`);
+    }
 
     console.log('Webhook response status:', webhookResponse.status);
     
     let webhookResult;
     try {
-      webhookResult = await webhookResponse.json();
+      const responseText = await webhookResponse.text();
+      console.log('Webhook response text:', responseText);
+      webhookResult = JSON.parse(responseText);
       console.log('Webhook result:', webhookResult);
     } catch (parseError) {
       console.error('Failed to parse webhook response:', parseError);
