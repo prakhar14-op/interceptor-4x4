@@ -15,6 +15,7 @@ const Navbar = () => {
     { path: '/workbench', label: 'Analysis' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/analytics', label: 'Statistics' },
+    { path: '/assistant', label: 'AI Assistant' },
     { path: '/contact', label: 'Contact' },
   ]; 
 

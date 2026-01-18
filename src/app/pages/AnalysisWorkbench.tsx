@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Upload, FileVideo, CheckCircle2, XCircle, Download, FileText, AlertTriangle, Loader2, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Upload, FileVideo, CheckCircle2, XCircle, Download, FileText, AlertTriangle, Loader2, Zap, Brain } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
 import { useArchitecture } from '../context/ArchitectureContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +38,9 @@ const AnalysisWorkbench = () => {
   // Refs for scroll targets
   const animationRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  
+  // Navigation
+  const navigate = useNavigate();
 
   const {
     state,
@@ -472,6 +476,21 @@ const AnalysisWorkbench = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleAIAssistant = () => {
+    if (!analysisResult) return;
+    
+    // Store the analysis data in localStorage for the AI Assistant to access
+    const analysisData = {
+      ...analysisResult,
+      filename: selectedFile?.name || 'Unknown',
+      file_size: selectedFile?.size || 0,
+      timestamp: new Date().toISOString()
+    };
+    
+    localStorage.setItem('currentAnalysis', JSON.stringify(analysisData));
+    navigate('/assistant');
+  };
+
   return (
     <div className="min-h-screen pt-32 sm:pt-36 lg:pt-40 pb-12 sm:pb-16 lg:pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -823,6 +842,14 @@ const AnalysisWorkbench = () => {
             >
               <Download className="w-4 h-4" />
               Download Report
+            </button>
+            
+            <button
+              onClick={handleAIAssistant}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 rounded-xl transition-colors"
+            >
+              <Brain className="w-4 h-4" />
+              Analyze with AI Assistant
             </button>
           </div>
         )}

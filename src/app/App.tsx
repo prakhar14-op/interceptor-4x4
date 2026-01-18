@@ -10,6 +10,7 @@ import AnalysisWorkbench from './pages/AnalysisWorkbench';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import AdvancedAnalytics from './pages/AdvancedAnalytics';
+import AIAssistant from './pages/AIAssistant';
 import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
 import ChartDemo from './pages/ChartDemo';
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/advanced-analytics" element={<AdvancedAnalytics />} />
+              <Route path="/assistant" element={<AIAssistant />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/chart-demo" element={<ChartDemo />} />
