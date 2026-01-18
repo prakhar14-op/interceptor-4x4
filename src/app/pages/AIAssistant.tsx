@@ -257,39 +257,103 @@ const AIAssistant = () => {
   };
 
   const generateMediaAnalysisResponse = (mediaData: any): string => {
-    let response = `## Media Analysis Complete\n\n`;
+    let response = `## 🎬 Comprehensive Media Analysis Complete\n\n`;
     
-    response += `**File:** ${mediaData.filename}\n`;
-    response += `**Size:** ${(mediaData.fileSize / (1024 * 1024)).toFixed(2)} MB\n`;
-    response += `**APIs Used:** ${mediaData.apisUsed?.join(', ') || 'Internal analysis'}\n\n`;
+    response += `**File:** ${mediaData.analysis?.metadata?.filename || 'Unknown'}\n`;
+    response += `**Size:** ${((mediaData.analysis?.metadata?.fileSize || 0) / (1024 * 1024)).toFixed(2)} MB\n`;
+    response += `**APIs Used:** ${mediaData.analysis?.apiSummary?.successfulApis || 0}/${mediaData.analysis?.apiSummary?.totalApis || 0} (${mediaData.analysis?.apiSummary?.successRate || '0%'} success rate)\n`;
+    response += `**Processing Time:** ${mediaData.summary?.processingTime || 'Unknown'}\n\n`;
 
-    if (mediaData.mediaAnalysis?.dimensions) {
-      response += `**Video Specs:**\n`;
-      response += `- Resolution: ${mediaData.mediaAnalysis.dimensions.width}x${mediaData.mediaAnalysis.dimensions.height}\n`;
-      response += `- Duration: ${mediaData.mediaAnalysis.duration?.toFixed(2) || 'Unknown'} seconds\n`;
-      if (mediaData.mediaAnalysis.videoSpecs) {
-        response += `- Format: ${mediaData.mediaAnalysis.videoSpecs.format}\n`;
-        response += `- Frame Rate: ${mediaData.mediaAnalysis.videoSpecs.frameRate} fps\n`;
+    // Video Specifications
+    if (mediaData.analysis?.videoSpecs) {
+      response += `## 📹 Video Specifications\n`;
+      response += `- **Resolution:** ${mediaData.analysis.videoSpecs.width}x${mediaData.analysis.videoSpecs.height}\n`;
+      response += `- **Duration:** ${mediaData.analysis.videoSpecs.duration?.toFixed(2) || 'Unknown'} seconds\n`;
+      response += `- **Frame Rate:** ${mediaData.analysis.videoSpecs.frameRate || 'Unknown'} fps\n`;
+      response += `- **Format:** ${mediaData.analysis.videoSpecs.format || 'Unknown'}\n`;
+      response += `- **Bit Rate:** ${mediaData.analysis.videoSpecs.bitRate || 'Unknown'} kbps\n\n`;
+    }
+
+    // Quality Analysis
+    if (mediaData.analysis?.qualityMetrics) {
+      response += `## 🔍 Quality Analysis\n`;
+      response += `- **Overall Quality Score:** ${(mediaData.analysis.qualityMetrics.overallScore * 100).toFixed(1)}%\n`;
+      response += `- **Analysis Sources:** ${mediaData.analysis.qualityMetrics.sources?.join(', ') || 'Multiple APIs'}\n`;
+      if (mediaData.analysis.qualityMetrics.details?.cloudinary) {
+        const cloudinary = mediaData.analysis.qualityMetrics.details.cloudinary;
+        response += `- **Brightness:** ${cloudinary.brightness || 'N/A'}\n`;
+        response += `- **Contrast:** ${cloudinary.contrast || 'N/A'}\n`;
+        response += `- **Saturation:** ${cloudinary.saturation || 'N/A'}\n`;
       }
       response += `\n`;
     }
 
-    if (mediaData.mediaAnalysis?.qualityMetrics) {
-      response += `**Quality Analysis:**\n`;
-      response += `- Overall Quality Score: ${mediaData.mediaAnalysis.internalAnalysis?.qualityScore?.toFixed(1) || 'N/A'}\n`;
-      response += `- Compression Artifacts: ${mediaData.mediaAnalysis.internalAnalysis?.compressionArtifacts ? 'Detected' : 'Not detected'}\n`;
-      response += `- Temporal Inconsistencies: ${mediaData.mediaAnalysis.internalAnalysis?.temporalInconsistencies ? 'Found' : 'None found'}\n\n`;
+    // Content Analysis
+    if (mediaData.analysis?.contentAnalysis) {
+      response += `## 🏷️ Content Analysis\n`;
+      if (mediaData.analysis.contentAnalysis.tags?.length > 0) {
+        const topTags = mediaData.analysis.contentAnalysis.tags.slice(0, 5);
+        response += `- **Top Tags:** ${topTags.map((t: any) => `${t.tag} (${t.source})`).join(', ')}\n`;
+      }
+      if (mediaData.analysis.contentAnalysis.faces?.length > 0) {
+        response += `- **Faces Detected:** ${mediaData.analysis.contentAnalysis.faces.length} faces from multiple APIs\n`;
+      }
+      response += `\n`;
     }
 
-    if (mediaData.mediaAnalysis?.contentTags?.length > 0) {
-      response += `**Content Tags:** ${mediaData.mediaAnalysis.contentTags.join(', ')}\n\n`;
+    // Deepfake Analysis
+    if (mediaData.deepfakeInsights) {
+      response += `## 🚨 Deepfake Risk Assessment\n`;
+      response += `- **Overall Risk Score:** ${(mediaData.deepfakeInsights.overallRiskScore * 100).toFixed(1)}%\n`;
+      response += `- **Risk Level:** ${mediaData.deepfakeInsights.confidence?.toUpperCase() || 'UNKNOWN'}\n`;
+      
+      if (mediaData.deepfakeInsights.riskFactors?.length > 0) {
+        response += `- **Risk Factors:**\n`;
+        mediaData.deepfakeInsights.riskFactors.forEach((factor: any) => {
+          response += `  • ${factor.factor} (${factor.severity} severity)\n`;
+        });
+      }
+      
+      if (mediaData.deepfakeInsights.positiveIndicators?.length > 0) {
+        response += `- **Authenticity Indicators:**\n`;
+        mediaData.deepfakeInsights.positiveIndicators.forEach((indicator: any) => {
+          response += `  • ${indicator.indicator}\n`;
+        });
+      }
+      
+      if (mediaData.deepfakeInsights.recommendations?.length > 0) {
+        response += `- **Recommendations:**\n`;
+        mediaData.deepfakeInsights.recommendations.forEach((rec: string) => {
+          response += `  • ${rec}\n`;
+        });
+      }
+      response += `\n`;
     }
 
-    if (mediaData.mediaAnalysis?.audioAnalysis) {
-      response += `**Audio Analysis:** Content safety and sentiment analysis enabled\n\n`;
+    // API Summary
+    if (mediaData.analysis?.apiSummary?.apisUsed?.length > 0) {
+      response += `## 🔌 API Integration Summary\n`;
+      response += `**Successfully Used APIs:**\n`;
+      mediaData.analysis.apiSummary.apisUsed.forEach((api: string) => {
+        const apiNames: { [key: string]: string } = {
+          'cloudinary': '🎨 Cloudinary (Video Quality & Content Analysis)',
+          'assemblyai': '🎤 AssemblyAI (Audio Intelligence & Content Safety)',
+          'google-cloud': '🧠 Google Cloud (Video Intelligence & ML)',
+          'azure': '🔵 Azure (Emotion Recognition & Scene Analysis)',
+          'aws-rekognition': '📊 AWS Rekognition (Advanced Face Analysis)'
+        };
+        response += `- ${apiNames[api] || api}\n`;
+      });
+      response += `\n`;
     }
 
-    response += `This comprehensive media analysis can help inform deepfake detection. Ask me specific questions about the video characteristics!`;
+    response += `## 💡 Next Steps\n`;
+    response += `This comprehensive media analysis provides deep insights that can enhance your deepfake detection accuracy. The multi-API approach gives you:\n\n`;
+    response += `✅ **Quality Assessment** - Understanding video characteristics that affect detection\n`;
+    response += `✅ **Content Intelligence** - Knowing what's in the video before analysis\n`;
+    response += `✅ **Risk Indicators** - Early warning signs of potential manipulation\n`;
+    response += `✅ **Technical Validation** - Verification of video authenticity markers\n\n`;
+    response += `Ask me specific questions about any aspect of this analysis!`;
     
     return response;
   };
